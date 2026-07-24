@@ -128,20 +128,8 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # API Key Configuration
-    api_key_input = st.text_input(
-        "Gemini API Key",
-        value=os.getenv("GEMINI_API_KEY", ""),
-        type="password",
-        help="Enter your Gemini API key from Google AI Studio (https://aistudio.google.com/)"
-    )
-    
-    if api_key_input:
-        st.success("API Key configured", icon="✅")
-    else:
-        st.warning("Please enter your Gemini API Key to use AI features.", icon="⚠️")
-        
-    planner = GeminiPlanner(api_key=api_key_input)
+    # Initialize Gemini Planner from .env / Environment
+    planner = GeminiPlanner()
     
     st.markdown("---")
     
@@ -279,7 +267,7 @@ with tab_tasks:
     # AI Priority Matrix Output
     if run_priority_ai:
         if not planner.is_configured():
-            st.error("Please enter a valid Gemini API Key in the sidebar first!")
+            st.error("⚠️ Please set your `GEMINI_API_KEY` in the `.env` file first!")
         elif not all_tasks:
             st.warning("Please add some tasks before generating priority recommendations.")
         else:
@@ -308,7 +296,7 @@ with tab_planner:
     
     if generate_plan:
         if not planner.is_configured():
-            st.error("Please enter a valid Gemini API Key in the sidebar first!")
+            st.error("⚠️ Please set your `GEMINI_API_KEY` in the `.env` file first!")
         else:
             with st.spinner("⏳ Building your optimal daily time-blocked schedule..."):
                 schedule_res = planner.generate_daily_schedule(all_tasks, start_time, end_time, break_pref)
@@ -336,7 +324,7 @@ with tab_study:
     
     if generate_study:
         if not planner.is_configured():
-            st.error("Please enter a valid Gemini API Key in the sidebar first!")
+            st.error("⚠️ Please set your `GEMINI_API_KEY` in the `.env` file first!")
         elif not subjects.strip():
             st.error("Please provide at least one subject to study!")
         else:
@@ -369,7 +357,7 @@ with tab_goals:
     
     if summarize_btn:
         if not planner.is_configured():
-            st.error("Please enter a valid Gemini API Key in the sidebar first!")
+            st.error("⚠️ Please set your `GEMINI_API_KEY` in the `.env` file first!")
         else:
             with st.spinner("🌟 Gemini is reviewing your daily accomplishments and generating insights..."):
                 goal_summary = planner.summarize_goals(completed_t, pending_t, reflection_text)
