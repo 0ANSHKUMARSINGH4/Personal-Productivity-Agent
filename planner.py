@@ -153,7 +153,7 @@ class GeminiPlanner:
         full_prompt = f"{system_prompt}\n\nUser Input:\n{user_prompt}"
 
         # Production models prioritized for speed, quota efficiency, and intelligence
-        candidate_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-pro"]
+        candidate_models = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-2.5-flash"]
         last_exception = None
 
         for model_name in candidate_models:
