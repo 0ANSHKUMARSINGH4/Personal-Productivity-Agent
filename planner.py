@@ -145,36 +145,42 @@ class GeminiPlanner:
 
     def _generate_content(self, system_prompt: str, user_prompt: str) -> str:
         """Internal helper to call Gemini API and return generated text."""
+        import time
+
         if not self.is_configured():
-            return "⚠️ **Gemini API key is not configured.** Please provide a valid Gemini API Key in the sidebar or `.env` file to enable AI features."
+            return "⚠️ **Gemini API key is not configured.** Please provide a valid Gemini API Key in the `.env` file to enable AI features."
 
         full_prompt = f"{system_prompt}\n\nUser Input:\n{user_prompt}"
 
-        try:
-            if GENAI_SDK_TYPE == "genai":
-                response = self.client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents=full_prompt
-                )
-                return response.text
-            elif GENAI_SDK_TYPE == "legacy":
-                model = genai_legacy.GenerativeModel("gemini-1.5-flash")
-                response = model.generate_content(full_prompt)
-                return response.text
-            else:
-                return "⚠️ No supported Google GenAI SDK installed."
-        except Exception as e:
-            # Fallback attempt with model names if primary fails
-            try:
-                if GENAI_SDK_TYPE == "genai":
-                    response = self.client.models.generate_content(
-                        model="gemini-1.5-flash",
-                        contents=full_prompt
-                    )
-                    return response.text
-            except Exception as inner_e:
-                pass
-            return f"❌ **Error generating response from Gemini API:** {str(e)}"
+        # Production models prioritized for speed, quota efficiency, and intelligence
+        candidate_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-pro"]
+        last_exception = None
+
+        for model_name in candidate_models:
+            for attempt in range(2):  # Retry once on transient rate limits (429)
+                try:
+                    if GENAI_SDK_TYPE == "genai":
+                        response = self.client.models.generate_content(
+                            model=model_name,
+                            contents=full_prompt
+                        )
+                        if response and hasattr(response, "text") and response.text:
+                            return response.text
+                    elif GENAI_SDK_TYPE == "legacy":
+                        model = genai_legacy.GenerativeModel(model_name)
+                        response = model.generate_content(full_prompt)
+                        if response and hasattr(response, "text") and response.text:
+                            return response.text
+                except Exception as e:
+                    last_exception = e
+                    err_msg = str(e)
+                    if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg or "Quota" in err_msg:
+                        time.sleep(2 * (attempt + 1))  # Exponential backoff
+                        continue
+                    else:
+                        break  # Try next model if it's not a rate limit error
+
+        return f"❌ **Error generating response from Gemini API:** {str(last_exception) if last_exception else 'Unknown error'}"
 
     def analyze_priorities(self, tasks: List[Dict[str, Any]]) -> str:
         """Generate priority matrix and execution sequence for tasks."""
